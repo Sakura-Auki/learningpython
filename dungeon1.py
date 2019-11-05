@@ -16,18 +16,19 @@ legend={
 
 d1="""
 ####################################################
-#......D.W..........W..............................#
-#..............................#####...............#
-#......k.......................#...D...............#
 #..................................................#
+#......D.W..........W..............................#
+#....................*.........#####...............#
+#>.....k............A..........#...D...............#
+#................A.................................#
 ####################################################
 """
 
 d2="""
 ####################################################
-#..................................................#
+#................Q.................................#
 #............................D######################
-#.############..................D.................##
+#<############..................D.................##
 #.##################################################
 """
 
@@ -35,7 +36,7 @@ d3="""
 ####################################################
 #D.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#
 #.................................................##
-#.#######D.........................................#
+#.#######D.......Q.................................#
 ####################################################
 """
 
@@ -54,6 +55,12 @@ def create():
                 elif char=="D":
                     row.append(".")
                     Door(x,y,z)
+                elif char=="A":
+                    row.append(".")
+                    Dog(x,y,z)
+                elif char=="*":
+                    row.append(".")
+                    Portal(x,y,z)
                 else:
                     row.append(char)
             level.append(row)
@@ -73,20 +80,30 @@ def roll_dice(number,sides,bonus=0):
     return total+bonus       
     
 def strike(a,d):
-	#a=attacker,d=defender
-	aname=a.__class__.__name__
-	dname=d.__class__.__name__
-	#3d6+dex>2d6+dex
-	print(aname,"tries to attack",dname,
-	"(3d6+{}>2d6+{})".format(a.dexterity,d.dexterity))
-	aroll=roll_dice(3,6,a.dexterity)
-	droll=roll_dice(2,6,d.dexterity)
-	if aroll>droll:
-		print("attacker sucessfull,10 damage")
-		d.hitpoints-=10
-	else:
-		print("attack failed")
-	
+    #a=attacker,d=defender
+    aname=a.__class__.__name__
+    dname=d.__class__.__name__
+    #3d6+dex>2d6+dex
+    print(aname,"tries to attack",dname,
+    "(3d6+{}>2d6+{})".format(a.dexterity,d.dexterity))
+    aroll=roll_dice(3,6,a.dexterity)
+    droll=roll_dice(2,6,d.dexterity)
+    if aroll<=droll:
+        print("attack failed")
+        return #leave this function
+    #---attack was successfull----
+    #---damage calculation----
+    print("attack hits , calculating damage...")
+    droll=roll_dice(1, a.strength,0)
+    print("armor reduces damage by {}".format(d.armor))
+    damage=droll-d.armor
+    if damage<=0:
+        print("no armor penetration, therefore no damage")
+    else:
+        print("attacker sucessfull,{} damage".format(damage))
+        d.hitpoints-=damage
+        print("{}has now only {} hitpoints left ".format(dname,d.hitpoints))
+    
         
 class Monster():
     
@@ -103,22 +120,28 @@ class Monster():
        self.keys=0
        self.srength=5
        self.dexterity=5
+       self.armor=0
        self.char="M"
        self.hitpoints=100
        self.overwrite_parameters()
     
     def collision(self,other):
-        print("boing! {} is attacking {}".format(other.__class__.__name__,
+        print("strike! {} is attacking {}".format(other.__class__.__name__,
                                              self.__class__.__name__))
+        strike(other ,self)
+        if self.hitpoints > 0:
+            print("counterstrike")
+            strike(self,other)
+ 
     
     def overwrite_parameters(self):
         pass
 class Door(Monster):
     def collision(self,other):
-        #print("boing! {} is attacking {}".format(other.__class__.__name__,
+        #print("strike! {} is attacking {}".format(other.__class__.__name__,
         #                                    self.__class__.__name__))
         print("A stable wooden door is blocking your path")
-        if other.keys>0:
+        if other.keys > 0:
             print("you open the door with one of your keys")
             self.hitpoints=0   #destroy door 
             other.keys-=1      #us up one key
@@ -158,6 +181,7 @@ class Hero(Monster):
         self.char="@"
         self.dexterity=5
         self.strength=8
+        self.armor=3
         
 class Wolf(Monster):
     
@@ -166,6 +190,31 @@ class Wolf(Monster):
         self.char="W" 
         self.dexterity=7
         self.strength=4
+        self.armor=1
+        
+class Dog(Monster):
+
+    def overwrite_parameters(self):
+        self.hitpoints=300
+        self.char="A"
+        self.dexterity=8
+        self.strength=5
+        self.armor=2
+
+class Portal(Monster):
+    
+    
+      def collision(self,other):
+          print("you bounce around")
+          other.x += random.randint(-3,3)
+          other.y += random.randint(-3,3)
+      def overwrite_parameters(self):
+        self.hitpoints=1
+        self.char="*"
+        self.dexterity=0
+        self.strength=0
+        self.armor=0
+    
     
 
 def game():
@@ -193,9 +242,9 @@ def game():
         dx,dy=0,0
         if command =="quit":
             break
-        if command=="up" and player.z>0:
+        if command=="up" and player.z>0 and dungeon[player.z][player.y][player.x]=="<":
             player.z-=1
-        if command =="down" and player.z <len(dungeon)-1:
+        if command =="down" and player.z <len(dungeon)-1 and dungeon[player.z][player.y][player.x]==">":
             player.z+=1
         if command =="w":
             dy= -1
@@ -237,7 +286,7 @@ def game():
         if target =="k":
             player.keys+=1
             print("you found a key!you have now {} key(s)".format(player.keys))
-            dungeon [player.z][player.y][player.z]="."#remove the key
+            dungeon [player.z][player.y][player.x]="."#remove the key
         
             
 game()      
