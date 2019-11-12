@@ -16,8 +16,8 @@ legend={
 
 d1="""
 ####################################################
-#..................................................#
-#......D.W..........W..............................#
+#.................................................*#
+#......D.W..........W............................###
 #....................*.........#####...............#
 #>.....k............A..........#...D...............#
 #................A.................................#
@@ -125,7 +125,7 @@ class Monster():
        self.hitpoints=100
        self.overwrite_parameters()
     
-    def collision(self,other):
+    def collision(self,other, dungeon=None):
         print("strike! {} is attacking {}".format(other.__class__.__name__,
                                              self.__class__.__name__))
         strike(other ,self)
@@ -137,7 +137,7 @@ class Monster():
     def overwrite_parameters(self):
         pass
 class Door(Monster):
-    def collision(self,other):
+    def collision(self,other, dungeon=None):
         #print("strike! {} is attacking {}".format(other.__class__.__name__,
         #                                    self.__class__.__name__))
         print("A stable wooden door is blocking your path")
@@ -204,10 +204,41 @@ class Dog(Monster):
 class Portal(Monster):
     
     
-      def collision(self,other):
+      def collision(self,other, dungeon):
           print("you bounce around")
-          other.x += random.randint(-3,3)
-          other.y += random.randint(-3,3)
+          while True:
+              dx = random.randint(-3,3)
+              dy = random.randint(-3,3)
+              # testen der neuen position
+              try:
+                  target=dungeon[other.y+dy][other.x+dx]
+              except:
+                  print("oops, that was out of the dungeon, i try again")
+                  continue
+              if target=="#":
+                  print("sorry this was a wall")
+                  continue
+              #-----test ob in anders Monster----
+              ok=False
+              for m in Monster.zoo.values():
+                  if (m.x==other.x+dx and m.y==other.y+dy and m.z==other.z
+                      and m.hitpoints>0 and m.number !=other.number):
+                          print("oops, other monster...")
+                          break
+              else:
+                  ok=True #das ganze for loop lief durch ohne ein break
+              if not ok:
+                  continue	
+                          
+              print("you are teleported") 
+              break
+              
+          other.x +=dx
+          other.y +=dy
+          
+          
+          
+    
       def overwrite_parameters(self):
         self.hitpoints=1
         self.char="*"
@@ -270,7 +301,7 @@ def game():
             if m.z==player.z and m.y==player.y+dy and m.x==player.x+dx:
                 dx=0
                 dy=0
-                m.collision(player)
+                m.collision(player, dungeon[player.z])
                 
                 
                 
